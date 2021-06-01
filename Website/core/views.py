@@ -9,19 +9,24 @@ from django.contrib import messages
 import numpy as np
 from django.conf import settings
 import pandas as pd
-from saved_model import finalized_model.sav
 from django.contrib.auth.decorators import login_required
 from .models import *
 from .forms import CreateUserForm
-
+import pickle
+from django.contrib.staticfiles.storage import staticfiles_storage
+import os
+import glob
 import pathlib
-PATH_TO_TEST_IMAGES_DIR = pathlib.Path('C:\\Users\\windows\\Desktop\\hackathon\\SPIT_HACKATHON\\Github\\Demand-Forecasting\\Website\\media\\imagesrec\\images')
-TEST_IMAGE_PATHS = sorted(list(PATH_TO_TEST_IMAGES_DIR.glob("*.jpg")))
+import json
+from django.contrib.auth.decorators import login_required
+  
+#TEST_IMAGE_PATHS = sorted(list(PATH_TO_TEST_IMAGES_DIR.glob("*.jpg")))
 media_url = settings.MEDIA_URL
+static_url = settings.STATIC_URL
 
 def loginPage(request):
     if request.user.is_authenticated:
-        return redirect('login')
+        return redirect('bulk')
     else:
         print(request.method)
         if request.method == 'POST':
@@ -45,7 +50,6 @@ def loginPage(request):
                     if request.method == 'POST':
                         username = request.POST.get('username')
                         password = request.POST.get('password')
-                        prodName = request.POST.get('prodName')
                         
                         user = User.objects.create_user(username=username, password=password)
                         # user.userprofile.user = authenticate(username=username, password=password)
@@ -54,7 +58,6 @@ def loginPage(request):
                         
                         profile = Profile()
                         profile.user = user
-                        profile.prodName = prodName
                         profile.save()
 
                         login(request, user)
@@ -70,6 +73,7 @@ def logoutUser(request):
 	logout(request)
 	return redirect('login')
 
+@login_required
 def bulk(request):
     if request.method == "POST":
         my_file = request.FILES.get("file")
@@ -79,34 +83,59 @@ def bulk(request):
         form = img()
         return render(request, 'bulk.html')
 
+
 def main(request):
     #global PATH_TO_LABELS
-    global TEST_IMAGE_PATHS  
     global media_url
-    filename="finalized_model.sav"
-    loaded_model = pickle.load(open(filename, 'rb'))
+    loaded_model = pickle.load(open('finalized_model.sav', 'rb'))
     if request.method == "POST":
         print("helsslo")
-        for file in TEST_IMAGE_PATHS:
-            df=pd.read_csv(file)
-            df=df.drop(['index'],axis=1)
+        print(os.listdir(settings.MEDIA_ROOT))
+        files = os.listdir(settings.MEDIA_ROOT)
+        df_total = pd.DataFrame()
+        for file in files:
+            df=pd.read_csv(settings.MEDIA_ROOT+'/'+file)
+            #df=df.drop(['id'],axis=1)
             df["diagnosis"] = np.nan
             row_len=len(df)
             df_x=df.drop(['diagnosis'],axis=1)
+            df_x=df_x.drop(['id'],axis=1)
             for row in range(0,row_len):
-                row_vector = df_x.iloc(row)
+                row_vector = df_x.iloc[row]
                 X_test=row_vector.to_numpy().reshape(1,-1)
                 value=""
-                if len(X_test)!=30:
+                if len(X_test[0])!=30:
                     df.iloc[row]['diagnosis']= "error"
+                    print("Column Error")
                 else:
                     Y_pred = loaded_model.predict(X_test)
                     if Y_pred==1:
-                        value="Malignant"
+                        # value="Malignant"
+                        value = 1
                     else:
-                        value="Benign"
-                    df.iloc[row]['diagnosis']= value
-            df.close()
-    result_dic = {'zzz.jpg':[{'hide_and_seek': 16.828192794320884, 'oreo': 15.088242364541538, 'bourbon': 5.835317175046396},{'hide_and_seek': ['left', 'bottom'], 'oreo': ['middle', 'top'], 'bourbon': ['middle', 'bottom']}],'4.jpg':[{'hide_and_seek': 16.828192794320884, 'oreo': 15.088242364541538, 'bourbon': 5.835317175046396},{'hide_and_seek': ['left', 'bottom'], 'oreo': ['middle', 'top'], 'bourbon': ['middle', 'bottom']}]}
+                        # value="Benign"
+                        value = 0
+                    print(value)
+                   
+                    df.at[row, 'diagnosis'] = value
+                    print(df.iloc[row]['diagnosis'])
+            # geeks_object = df.to_html()
+            # return HttpResponse(geeks_object)
 
-    return render(request, 'result.html',{'result_dic':result_dic})
+            df_total = pd.concat([df_total, df])
+            print(df)
+            # df.close()
+            df.to_csv(file[:-4]+'_predicted.csv')
+        print(df_total)
+        json_records = df_total.reset_index().to_json(orient ='records')
+        data = []
+        data = json.loads(json_records)
+        context = {'d': data}
+        return render(request, 'table.html', context)
+
+
+
+    return render(request, 'bulk.html')
+    
+def index(request):
+    return redirect('login')
