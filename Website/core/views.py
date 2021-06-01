@@ -8,8 +8,8 @@ from .forms import img
 from django.contrib import messages
 import numpy as np
 from django.conf import settings
-
-
+import pandas as pd
+from saved_model import finalized_model.sav
 from django.contrib.auth.decorators import login_required
 from .models import *
 from .forms import CreateUserForm
@@ -80,11 +80,32 @@ def bulk(request):
         return render(request, 'bulk.html')
 
 def main(request):
-    global PATH_TO_LABELS
+    #global PATH_TO_LABELS
     global TEST_IMAGE_PATHS  
     global media_url
+    filename="finalized_model.sav"
+    loaded_model = pickle.load(open(filename, 'rb'))
     if request.method == "POST":
         print("helsslo")
+        for file in TEST_IMAGE_PATHS:
+            df=pd.read_csv(file)
+            df=df.drop(['index'],axis=1)
+            df["diagnosis"] = np.nan
+            row_len=len(df)
+            df_x=df.drop(['diagnosis'],axis=1)
+            for row in range(0,row_len):
+                row_vector = df_x.iloc(row)
+                X_test=row_vector.to_numpy().reshape(1,-1)
+                value=""
+                if len(X_test)!=30:
+                    df.iloc[row]['diagnosis']= "error"
+                else:
+                    Y_pred = loaded_model.predict(X_test)
+                    if Y_pred==1:
+                        value="Malignant"
+                    else:
+                        value="Benign"
+                    df.iloc[row]['diagnosis']= value
     result_dic = {'zzz.jpg':[{'hide_and_seek': 16.828192794320884, 'oreo': 15.088242364541538, 'bourbon': 5.835317175046396},{'hide_and_seek': ['left', 'bottom'], 'oreo': ['middle', 'top'], 'bourbon': ['middle', 'bottom']}],'4.jpg':[{'hide_and_seek': 16.828192794320884, 'oreo': 15.088242364541538, 'bourbon': 5.835317175046396},{'hide_and_seek': ['left', 'bottom'], 'oreo': ['middle', 'top'], 'bourbon': ['middle', 'bottom']}]}
 
     return render(request, 'result.html',{'result_dic':result_dic})
