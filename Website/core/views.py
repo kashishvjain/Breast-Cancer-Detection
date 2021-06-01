@@ -106,6 +106,7 @@ def main(request):
                     else:
                         value="Benign"
                     df.iloc[row]['diagnosis']= value
+            df.close()
     result_dic = {'zzz.jpg':[{'hide_and_seek': 16.828192794320884, 'oreo': 15.088242364541538, 'bourbon': 5.835317175046396},{'hide_and_seek': ['left', 'bottom'], 'oreo': ['middle', 'top'], 'bourbon': ['middle', 'bottom']}],'4.jpg':[{'hide_and_seek': 16.828192794320884, 'oreo': 15.088242364541538, 'bourbon': 5.835317175046396},{'hide_and_seek': ['left', 'bottom'], 'oreo': ['middle', 'top'], 'bourbon': ['middle', 'bottom']}]}
 
     return render(request, 'result.html',{'result_dic':result_dic})
