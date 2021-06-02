@@ -20,6 +20,11 @@ import pathlib
 import json
 from django.contrib.auth.decorators import login_required
 import shutil
+import numpy
+from django.views.decorators.cache import cache_page
+from django.views.decorators.csrf import csrf_protect
+from django.template import RequestContext
+
 #TEST_IMAGE_PATHS = sorted(list(PATH_TO_TEST_IMAGES_DIR.glob("*.jpg")))
 media_url = settings.MEDIA_URL
 static_url = settings.STATIC_URL
@@ -161,3 +166,88 @@ def main(request):
 
 def index(request):
     return redirect('login')
+
+@csrf_protect
+def single(request):
+    if request.method == "POST":
+        print("Post")
+        loaded_model = pickle.load(open('finalized_model.sav', 'rb'))
+
+        mean_radius = float(request.POST.get('mean_radius'))
+        mean_texture = float(request.POST.get('mean_texture'))
+        mean_perimeter = float(request.POST.get('mean_perimeter'))
+        mean_area = float(request.POST.get('mean_area'))
+        mean_smoothness = float(request.POST.get('mean_smoothness'))
+        mean_compactness = float(request.POST.get('mean_compactness'))
+        mean_concavity = float(request.POST.get('mean_concavity'))
+        mean_concave_points = float(request.POST.get('mean_concave_points'))
+        mean_symmetry = float(request.POST.get('mean_symmetry'))
+        mean_fractal_dimension = float(request.POST.get('mean_fractal_dimension'))
+        SE_radius = float(request.POST.get('SE_radius'))
+        SE_texture = float(request.POST.get('SE_texture'))
+        SE_perimeter = float(request.POST.get('SE_perimeter'))
+        SE_area = float(request.POST.get('SE_area'))
+        SE_smoothness = float(request.POST.get('SE_smoothness'))
+        SE_compactness = float(request.POST.get('SE_compactness'))
+        SE_concavity = float(request.POST.get('SE_concavity'))
+        SE_concave_points = float(request.POST.get('SE_concave_points'))
+        SE_symmetry = float(request.POST.get('SE_symmetry'))
+        SE_fractal_dimension = float(request.POST.get('SE_fractal_dimension'))
+        worst_radius = float(request.POST.get('worst_radius'))
+        worst_texture = float(request.POST.get('worst_texture'))
+        worst_perimeter = float(request.POST.get('worst_perimeter'))
+        worst_area = float(request.POST.get('worst_area'))
+        worst_smoothness = float(request.POST.get('worst_smoothness'))
+        worst_compactness = float(request.POST.get('worst_compactness'))
+        worst_concavity = float(request.POST.get('worst_concavity'))
+        worst_concave_points = float(request.POST.get('worst_concave_points'))
+        worst_symmetry = float(request.POST.get('worst_symmetry'))
+        worst_fractal_dimension = float(request.POST.get('worst_fractal_dimension'))
+
+        arr = [
+            mean_radius,
+            mean_texture,
+            mean_perimeter,
+            mean_area,
+            mean_smoothness,
+            mean_compactness,
+            mean_concavity,
+            mean_concave_points,
+            mean_symmetry,
+            mean_fractal_dimension,
+            SE_radius,
+            SE_texture,
+            SE_perimeter,
+            SE_area,
+            SE_smoothness,
+            SE_compactness,
+            SE_concavity,
+            SE_concave_points,
+            SE_symmetry,
+            SE_fractal_dimension,
+            worst_radius,
+            worst_texture,
+            worst_perimeter,
+            worst_area,
+            worst_smoothness,
+            worst_compactness,
+            worst_concavity,
+            worst_concave_points,
+            worst_symmetry,
+            worst_fractal_dimension,
+        ]
+        print(arr)
+        X = numpy.array(arr)
+        X = X.reshape(1, -1) 
+        print("len",len(X))
+        Y_pred = loaded_model.predict(X)
+        value = 'Error'
+        if Y_pred==1:
+            value="Malignant"
+        else:
+            value="Benign"
+        print(value)
+        return render(request, 'single.html',{'predicted':value})
+
+    print(1)
+    return render(request, 'single.html')

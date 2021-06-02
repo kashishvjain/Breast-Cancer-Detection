@@ -13,6 +13,7 @@ urlpatterns = [
 	path('bulk',views.bulk, name="bulk"),
 	path('redirection',views.main, name="main"),
 	path('result/', views.logoutUser, name="result"),
+	path('single/', views.single, name="single"),
 	# path('editprofile/', views.profile, name="profile"),
 	# path('profile/<str:name>', views.profilepage, name="profilepage"),
 ]
