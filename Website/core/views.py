@@ -15,17 +15,12 @@ from .forms import CreateUserForm
 import pickle
 from django.contrib.staticfiles.storage import staticfiles_storage
 import os
-import glob
-import pathlib
 import json
 from django.contrib.auth.decorators import login_required
 import shutil
-import numpy
-from django.views.decorators.cache import cache_page
 from django.views.decorators.csrf import csrf_protect
-from django.template import RequestContext
+import joblib
 
-#TEST_IMAGE_PATHS = sorted(list(PATH_TO_TEST_IMAGES_DIR.glob("*.jpg")))
 media_url = settings.MEDIA_URL
 static_url = settings.STATIC_URL
 
@@ -104,9 +99,9 @@ def bulk(request):
 
 
 def main(request):
-    #global PATH_TO_LABELS
     global media_url
     loaded_model = pickle.load(open('finalized_model.sav', 'rb'))
+    sc=joblib.load('std_scaler.bin')
     if request.method == "POST":
         print("helsslo")
         print(os.listdir(settings.MEDIA_ROOT))
@@ -120,15 +115,19 @@ def main(request):
             row_len=len(df)
             df_x=df.drop(['diagnosis'],axis=1)
             df_x=df_x.drop(['id'],axis=1)
+            print("type",df_x.shape)
+            df_x1 = sc.transform(df_x)
             for row in range(0,row_len):
-                row_vector = df_x.iloc[row]
-                X_test=row_vector.to_numpy().reshape(1,-1)
+                # row_vector = df_x.iloc[row]
+                # X_test=row_vector.to_numpy().reshape(1,-1)
+                
                 value=""
-                if len(X_test[0])!=30:
+                if len(df_x1[0])!=30:
                     df.iloc[row]['diagnosis']= "error"
                     print("Column Error")
                 else:
-                    Y_pred = loaded_model.predict(X_test)
+                    Y_pred = loaded_model.predict(df_x1[row].reshape(1,-1))
+                    print("Hello",Y_pred)
                     if Y_pred==1:
                         # value="Malignant"
                         value = 1
@@ -143,7 +142,7 @@ def main(request):
             # return HttpResponse(geeks_object)
             df_total = pd.concat([df_total, df])
 
-            print(df)
+            
             # df.close()
             # df.to_csv('Predicted/'+file[:-4]+'_predicted.csv')
             # json_records = df.reset_index().to_json(orient ='records')
@@ -151,12 +150,11 @@ def main(request):
             # data = json.loads(json_records)
             # context[file] = data
 
-        print(df_total)
+        
         json_records = df_total.reset_index().to_json(orient ='records')
         data = []
         data = json.loads(json_records)
         context = {'d': data}
-        print(context)
         delete()
         return render(request, 'table.html', context)
 
@@ -169,9 +167,11 @@ def index(request):
 
 @csrf_protect
 def single(request):
+    
     if request.method == "POST":
         print("Post")
         loaded_model = pickle.load(open('finalized_model.sav', 'rb'))
+        sc=joblib.load('std_scaler.bin')
 
         mean_radius = float(request.POST.get('mean_radius'))
         mean_texture = float(request.POST.get('mean_texture'))
@@ -237,7 +237,12 @@ def single(request):
             worst_fractal_dimension,
         ]
         print(arr)
-        X = numpy.array(arr)
+
+        X = np.array(arr)
+        df = pd.DataFrame(X) 
+        df = df.transpose()
+        print("df",df)
+        X = sc.transform(df)
         X = X.reshape(1, -1) 
         print("len",len(X))
         Y_pred = loaded_model.predict(X)

@@ -269,6 +269,9 @@
                     width: calc(50% - 1px);
                 }
             }
+            .form .field.quarter {
+                    width: calc(25% - 1px);
+                }
             .form .field.last {
                 margin-left: auto;
             }
@@ -378,7 +381,7 @@
         <form action="#" class="form" method="POST">
             {% csrf_token %} 
             <p class="field required half">
-                <label class="label required" for="mean_radius">Mean Radius</label>
+                <label class="label" for="mean_radius">Mean Radius</label>
                 <input class="text-input" id="mean_radius" name="mean_radius" required type="text" />
             </p>
             <p class="field required half">
