@@ -150,7 +150,7 @@ def main(request):
         json_records = df_total.reset_index().to_json(orient ='records')
         data = []
         data = json.loads(json_records)
-        context['files'] = files
+        context = {'d': data}
         print(context)
         delete()
         return render(request, 'table.html', context)
